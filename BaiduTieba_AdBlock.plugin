@@ -1,0 +1,58 @@
+#!name = 百度贴吧去广告
+#!desc = 去除百度贴吧开屏广告、信息流广告、Banner广告、视频广告等
+#!author = Claude
+#!icon = https://tieba.baidu.com/favicon.ico
+#!homepage = https://github.com
+#!version = 1.0.0
+#!system = iOS
+#!tag = 贴吧, 去广告
+
+[Rule]
+# 拦截广告域名
+DOMAIN-SUFFIX,afd.baidu.com,REJECT
+DOMAIN-SUFFIX,cpro.baidu.com,REJECT
+DOMAIN-SUFFIX,cpro.baidustatic.com,REJECT
+DOMAIN-SUFFIX,pos.baidu.com,REJECT
+DOMAIN-SUFFIX,union.baidu.com,REJECT
+DOMAIN-SUFFIX,unionfit.baidu.com,REJECT
+DOMAIN-SUFFIX,ssp.n.shifen.com,REJECT
+DOMAIN-SUFFIX,m.baidu.com,NO-RESOLVE
+DOMAIN-KEYWORD,tieba-ad,REJECT
+DOMAIN-KEYWORD,tbsns,REJECT
+
+[URL Rewrite]
+# 开屏广告拦截（启动页广告）
+^https?://tiebac\.baidu\.com/c/s/splashAd reject-200
+^https?://tiebac\.baidu\.com/c/s/splash reject-200
+^https?://tiebac\.baidu\.com/c/s/openscreen reject-200
+
+# 通用广告接口拦截
+^https?://tiebac\.baidu\.com/c/s/ad\b reject-200
+^https?://tiebac\.baidu\.com/c/s/adsearch reject-200
+^https?://tiebac\.baidu\.com/c/s/adact reject-200
+^https?://tiebac\.baidu\.com/c/s/nativeAd reject-200
+^https?://tiebac\.baidu\.com/c/s/nativead reject-200
+^https?://tiebac\.baidu\.com/c/s/fbcloseAd reject-200
+^https?://tiebac\.baidu\.com/c/s/reportAd reject-200
+^https?://tiebac\.baidu\.com/c/s/voteAd reject-200
+
+# 信息流广告
+^https?://tiebac\.baidu\.com/c/f/forum/index.*ad= reject-200
+^https?://tiebac\.baidu\.com/c/f/frs/recommend reject-200
+
+# 广告上报/统计
+^https?://tiebac\.baidu\.com/c/s/tblog reject-200
+^https?://eclick\.baidu\.com reject-200
+
+[Script]
+# 开屏广告处理 - 拦截并返回空数据
+http-response ^https?://tiebac\.baidu\.com/c/s/splashAd script-path=https://raw.githubusercontent.com/sundaysnowing/LoonPlugins-baidu/refs/heads/main/splashAd.js, requires-body=true, timeout=10, tag=贴吧开屏广告
+
+# 信息流广告过滤（通过脚本移除广告卡片）
+http-response ^https?://tiebac\.baidu\.com/c/f/forum/index script-path=https://raw.githubusercontent.com/sundaysnowing/LoonPlugins-baidu/refs/heads/main/feedAd.js, requires-body=true, timeout=10, tag=贴吧信息流广告
+
+# 帖子内广告过滤
+http-response ^https?://tiebac\.baidu\.com/c/f/pb/page script-path=https://raw.githubusercontent.com/sundaysnowing/LoonPlugins-baidu/refs/heads/main/pbAd.js, requires-body=true, timeout=10, tag=贴吧帖子广告
+
+[MITM]
+hostname = tiebac.baidu.com, *.tieba.baidu.com, tieba.baidu.com
