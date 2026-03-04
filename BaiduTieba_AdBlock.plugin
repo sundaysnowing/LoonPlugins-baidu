@@ -1,0 +1,110 @@
+#!name = 百度贴吧去广告
+#!desc = 20260305; 开屏广告; 首页/吧内信息流广告; 帖子详情页广告; 看图模式广告; 悬浮广告; 直播推荐; 吧头图片广告; 禁止广告SDK初始化(穿山甲/广点通/快手/百青藤等); 广告上报拦截
+#!author = sundaysnowing (based on app2smile/rules)
+#!icon = https://raw.githubusercontent.com/luestr/IconResource/main/App_icon/120px/Tieba.png
+#!homepage = https://github.com/sundaysnowing/LoonPlugins-baidu
+#!version = 5.0.0
+#!system = iOS
+#!tag = 贴吧, 去广告
+
+[Argument]
+per_filter_video_thread = select,"0","1",tag=推荐页不展示视频贴,desc=设置为1则推荐页不展示视频贴
+
+# ══════════════════════════════════════════════════════════
+# [Rule] 广告域名直接拦截
+# 第一道防线：DNS/路由层直接丢弃广告平台请求
+# 覆盖百度广告联盟、穿山甲、广点通、快手、百青藤等
+# 这是之前版本完全缺失的一层——淘宝/千问等品牌广告素材
+# 走的是第三方广告平台域名，不经过 tiebac.baidu.com，
+# 所以脚本拦不到，必须在域名层 REJECT
+# ══════════════════════════════════════════════════════════
+[Rule]
+# 百度广告核心域名
+DOMAIN,180.76.76.200,REJECT
+IP-CIDR,180.76.76.200/32,REJECT,no-resolve
+DOMAIN-SUFFIX,afd.baidu.com,REJECT
+DOMAIN-SUFFIX,cpro.baidu.com,REJECT
+DOMAIN-SUFFIX,cpro.baidustatic.com,REJECT
+DOMAIN-SUFFIX,eclick.baidu.com,REJECT
+DOMAIN-SUFFIX,pos.baidu.com,REJECT
+DOMAIN-SUFFIX,union.baidu.com,REJECT
+DOMAIN-SUFFIX,unionfit.baidu.com,REJECT
+DOMAIN-SUFFIX,ssp.n.shifen.com,REJECT
+DOMAIN-SUFFIX,mobads.baidu.com,REJECT
+DOMAIN-SUFFIX,mobads-logs.baidu.com,REJECT
+DOMAIN-SUFFIX,nsclick.baidu.com,REJECT
+DOMAIN-SUFFIX,hmma.baidu.com,REJECT
+DOMAIN-SUFFIX,mtj.baidu.com,REJECT
+# 百度广告统计/上报
+DOMAIN-SUFFIX,log.baidu.com,REJECT
+DOMAIN-SUFFIX,sclick.baidu.com,REJECT
+DOMAIN-SUFFIX,statci.tieba.baidu.com,REJECT
+# 穿山甲（字节系广告SDK）
+DOMAIN-SUFFIX,ad.toutiao.com,REJECT
+DOMAIN-SUFFIX,ad.oceanengine.com,REJECT
+DOMAIN-SUFFIX,adlog.toutiao.com,REJECT
+DOMAIN-SUFFIX,mon.snssdk.com,REJECT
+# 广点通（腾讯广告SDK）
+DOMAIN-SUFFIX,gdt.qq.com,REJECT
+DOMAIN-SUFFIX,e.gdt.qq.com,REJECT
+# 快手广告SDK
+DOMAIN-SUFFIX,ad.kuaishou.com,REJECT
+DOMAIN-SUFFIX,adsense.kuaishou.com,REJECT
+# 百青藤
+DOMAIN-SUFFIX,nbsss.baidu.com,REJECT
+DOMAIN-SUFFIX,bqt.baidu.com,REJECT
+
+# ══════════════════════════════════════════════════════════
+# [URL Rewrite] 广告接口直接拒绝
+# 第二道防线：贴吧服务器上的广告专用接口直接返回空
+# ══════════════════════════════════════════════════════════
+[URL Rewrite]
+# 开屏广告
+^https?://tiebac\.baidu\.com/c/s/splashAd reject-200
+^https?://tiebac\.baidu\.com/c/s/splash reject-200
+^https?://tiebac\.baidu\.com/c/s/openscreen reject-200
+# 广告日志上报（阻止贴吧统计广告曝光/点击）
+^https?://tiebac\.baidu\.com/c/s/adLog reject-200
+^https?://tiebac\.baidu\.com/c/s/adNewLog reject-200
+^https?://tiebac\.baidu\.com/c/s/tblog reject-200
+# 广告竞价/投放接口
+^https?://tiebac\.baidu\.com/c/s/ad\b reject-200
+^https?://tiebac\.baidu\.com/c/s/adsearch reject-200
+^https?://tiebac\.baidu\.com/c/s/adact reject-200
+^https?://tiebac\.baidu\.com/c/s/nativeAd reject-200
+^https?://tiebac\.baidu\.com/c/s/nativead reject-200
+^https?://tiebac\.baidu\.com/c/s/fbcloseAd reject-200
+^https?://tiebac\.baidu\.com/c/s/reportAd reject-200
+^https?://eclick\.baidu\.com reject-200
+
+# ══════════════════════════════════════════════════════════
+# [Script] 响应体内容精确过滤（最核心）
+#
+# 双脚本 = 双格式全覆盖，直接引用 app2smile 持续维护的原版
+#
+# tieba-json.js 覆盖（JSON格式）：
+#   c/s/sync            ← 禁止穿山甲/广点通/快手等6个SDK初始化
+#                          清除悬浮广告/开屏配置/回帖栏广告
+#   c/f/ad/getSplashAd  ← 开屏广告备用路径
+#   tiebaads/commonbatch← 看图模式广告
+#   c/f/frs/page        ← 吧头直播、header图片广告、直播帖过滤
+#   c/f/frs/threadlist  ← 帖子列表关联商品
+#   c/f/pb/page         ← 详情页直播广告、outer_item、关联商品
+#   c/f/pb/picpage      ← 看图模式直播
+#   c/f/excellent/personalized ← 推荐页banner、直播推荐
+#   c/f/frs/generalTabList     ← 综合tab关联商品
+#
+# tieba-proto.js 覆盖（ProtoBuf/MessagePack二进制格式）：
+#   c/f/frs/page、threadlist、generalTabList
+#   c/f/pb/page
+#   c/f/excellent/personalized
+#   c/b/ad/adBid        ← 纯广告接口，直接清空
+#   c/f/ad/getFeedAd    ← 纯广告接口，直接清空
+# ══════════════════════════════════════════════════════════
+[Script]
+http-response ^https?://(tiebac|c\.tieba)\.baidu\.com/(c/(s\/sync|f\/(ad\/getSplashAd|frs\/(page|threadlist|generalTabList)|pb\/(pic)?page|excellent\/personalized))$|tiebaads\/commonbatch\?) script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/tieba-json.js, requires-body=true, timeout=10, tag=贴吧JSON广告过滤
+
+http-response ^https?://(tiebac|c\.tieba)\.baidu\.com/c/(b\/ad\/adBid|f\/(frs\/(page|threadlist|generalTabList)|ad\/getFeedAd|pb\/page|excellent\/personalized))\?cmd script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/tieba-proto.js, requires-body=true, binary-body-mode=true, timeout=10, tag=贴吧ProtoBuf广告过滤, argument=[{per_filter_video_thread}]
+
+[MITM]
+hostname = tiebac.baidu.com, c.tieba.baidu.com
